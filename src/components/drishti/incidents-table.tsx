@@ -96,7 +96,9 @@ export const columns: ColumnDef<Incident>[] = [
     },
     cell: ({ row }) => {
         const date = new Date(row.getValue("timestamp"));
-        return <div className="text-right font-medium">{date.toLocaleString()}</div>;
+        const formattedDate = new Intl.DateTimeFormat('en-US').format(date);
+        const formattedTime = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true }).format(date);
+        return <div className="text-right font-medium">{`${formattedDate}, ${formattedTime}`}</div>;
     },
   },
 ];
