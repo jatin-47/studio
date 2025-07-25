@@ -1,13 +1,16 @@
 
 "use server";
 import { cookies } from "next/headers";
-import { authAdmin, dbAdmin } from "@/lib/firebase-admin";
-import { FieldValue } from 'firebase-admin/firestore';
+import { authAdmin } from "@/lib/firebase-admin";
+import sgMail from '@sendgrid/mail';
 
 // In-memory store for OTPs for this example. 
 // In a production app, use a more persistent and scalable store like Firestore or Redis.
 const otpStore: { [email: string]: { otp: string; expires: number } } = {};
 
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
 export async function login(email: string, otp: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -70,11 +73,22 @@ export async function sendOtp(email: string): Promise<{ success: boolean; error?
         // Store the OTP and its expiration
         otpStore[email] = { otp, expires };
         
-        // --- Integration Point for Email Service ---
-        // In a real application, you would integrate with an email service here to send the OTP.
-        // For this example, we will log the OTP to the console for testing.
-        console.log(`OTP for ${email}: ${otp}`);
-        // -----------------------------------------
+        if (!process.env.SENDGRID_API_KEY || !process.env.SENDGRID_FROM_EMAIL) {
+            console.error("SendGrid API Key or From Email is not configured.");
+            // For testing purposes, log the OTP if SendGrid isn't set up
+            console.log(`OTP for ${email}: ${otp}`);
+            return { success: true, error: "Email service not configured; OTP logged to console for testing." };
+        }
+
+        const msg = {
+          to: email,
+          from: process.env.SENDGRID_FROM_EMAIL,
+          subject: 'Your Drishti Login OTP',
+          text: `Your One-Time Password is: ${otp}`,
+          html: `<strong>Your One-Time Password is: ${otp}</strong>`,
+        };
+
+        await sgMail.send(msg);
 
         return { success: true };
     } catch (error: any) {
@@ -82,6 +96,8 @@ export async function sendOtp(email: string): Promise<{ success: boolean; error?
             return { success: false, error: "You cannot login. Please contact an administrator." };
         }
         console.error("Error in sendOtp:", error);
+        if(error.response) console.error(error.response.body);
+
         return { success: false, error: "An unexpected error occurred while sending OTP." };
     }
 }
