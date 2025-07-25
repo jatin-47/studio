@@ -1,18 +1,36 @@
+
 "use server";
 
 import { users } from "@/lib/data";
+import { User } from "@/lib/types";
 
-export async function login(credentials: { mobileNumber: string; password: string }) {
+export async function checkUser(email: string) {
   try {
-    const user = users.find(
-      (u) => u.mobileNumber === credentials.mobileNumber && u.password === credentials.password
-    );
+    const user = users.find((u) => u.email === email);
 
-    if (user && user.role === 'admin') {
-      // In a real app, you would create a session here
-      return { success: true };
+    if (user) {
+      return { exists: true };
     } else {
-      return { success: false, error: "Invalid mobile number or password, or you are not an admin." };
+      return { exists: false, error: "You cannot login, contact the admin." };
+    }
+  } catch (error) {
+    console.error(error);
+    return { exists: false, error: "An unexpected error occurred." };
+  }
+}
+
+export async function login(email: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  try {
+    const user = users.find((u) => u.email === email);
+
+    if (user) {
+      // In a real app, you would also verify the OTP here.
+      // We are simulating a successful login if the email exists.
+      return { success: true, user };
+    } else {
+      // This case should ideally not be hit if checkUser is called first,
+      // but is kept for robustness.
+      return { success: false, error: "Invalid email." };
     }
   } catch (error) {
     console.error(error);

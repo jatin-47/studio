@@ -1,3 +1,4 @@
+
 export interface CameraFeed {
   id: string;
   name: string;
@@ -38,7 +39,7 @@ export interface Incident {
 
 export interface User {
   id: string;
-  mobileNumber: string;
-  password: string; // In a real app, this should be a hashed password
+  email: string;
+  name: string;
   role: 'admin' | 'staff';
 }

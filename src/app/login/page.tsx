@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -17,11 +18,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { login } from "@/actions/auth";
+import { checkUser, login } from "@/actions/auth";
+import { Loader2 } from "lucide-react";
 
-const formSchema = z.object({
-  mobileNumber: z.string().min(1, { message: "Mobile number is required." }),
-  password: z.string().min(1, { message: "Password is required." }),
+const emailSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address." }),
+});
+
+const otpSchema = z.object({
+  otp: z.string().min(6, { message: "OTP must be 6 characters." }),
 });
 
 const DrishtiLogo = () => (
@@ -54,21 +59,53 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [otpSent, setOtpSent] = React.useState(false);
+  const [email, setEmail] = React.useState("");
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const emailForm = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
     defaultValues: {
-      mobileNumber: "",
-      password: "",
+      email: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const otpForm = useForm<z.infer<typeof otpSchema>>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: {
+      otp: "",
+    },
+  });
+
+  async function handleSendOtp(values: z.infer<typeof emailSchema>) {
     setIsLoading(true);
-    const response = await login(values);
+    setEmail(values.email);
+    const response = await checkUser(values.email);
     setIsLoading(false);
 
-    if (response.success) {
+    if (response.exists) {
+      setOtpSent(true);
+      toast({
+        title: "OTP Sent",
+        description: "An OTP has been sent to your email (simulated).",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Authentication Failed",
+        description: response.error,
+      });
+    }
+  }
+
+  async function handleLogin(values: z.infer<typeof otpSchema>) {
+    setIsLoading(true);
+    // In a real app, you'd verify the OTP. Here we just log in.
+    const response = await login(email); 
+    setIsLoading(false);
+
+    if (response.success && response.user) {
+      // Store user info in localStorage for this prototype
+      localStorage.setItem('user', JSON.stringify(response.user));
       router.push("/");
     } else {
       toast({
@@ -89,42 +126,57 @@ export default function LoginPage() {
             <Card className="w-full max-w-sm">
                 <CardHeader>
                 <CardTitle>Login</CardTitle>
-                <CardDescription>Enter your mobile number and password to access your account.</CardDescription>
+                <CardDescription>
+                    {!otpSent
+                        ? "Enter your email to receive an OTP."
+                        : "Enter the OTP sent to your email."
+                    }
+                </CardDescription>
                 </CardHeader>
                 <CardContent>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="mobileNumber"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Mobile Number</FormLabel>
-                            <FormControl>
-                            <Input placeholder="Enter your mobile number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                            <Input type="password" placeholder="Enter your password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading ? 'Signing in...' : 'Sign In'}
-                    </Button>
-                    </form>
-                </Form>
+                    {!otpSent ? (
+                        <Form {...emailForm}>
+                            <form onSubmit={emailForm.handleSubmit(handleSendOtp)} className="space-y-4">
+                            <FormField
+                                control={emailForm.control}
+                                name="email"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email ID</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="Enter your email" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <Button type="submit" className="w-full" disabled={isLoading}>
+                                {isLoading ? <Loader2 className="animate-spin"/> : 'Send OTP'}
+                            </Button>
+                            </form>
+                        </Form>
+                    ) : (
+                        <Form {...otpForm}>
+                            <form onSubmit={otpForm.handleSubmit(handleLogin)} className="space-y-4">
+                            <FormField
+                                control={otpForm.control}
+                                name="otp"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>OTP</FormLabel>
+                                    <FormControl>
+                                    <Input type="text" placeholder="Enter your OTP" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <Button type="submit" className="w-full" disabled={isLoading}>
+                                {isLoading ? <Loader2 className="animate-spin"/> : 'Login'}
+                            </Button>
+                            </form>
+                        </Form>
+                    )}
                 </CardContent>
             </Card>
         </div>

@@ -18,6 +18,8 @@ import {
   Wind,
   Map,
   Thermometer,
+  Settings,
+  LogOut,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -26,6 +28,7 @@ import {
   type Incident,
   type IncidentSeverity,
   type IncidentType,
+  type User,
   zones as initialZones,
   incidents as initialIncidents,
   waitTimeData,
@@ -66,6 +69,7 @@ import { SmartLocationTool } from "@/components/drishti/smart-location-tool";
 import { ReportIncidentForm } from "@/components/drishti/report-incident-form";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
 
 const DrishtiLogo = () => (
   <svg
@@ -95,6 +99,8 @@ const DrishtiLogo = () => (
 
 
 export default function Home() {
+  const router = useRouter();
+  const [user, setUser] = React.useState<User | null>(null);
   const [activeView, setActiveView] = React.useState("dashboard");
   const [zones, setZones] = React.useState<Zone[]>(initialZones);
   const [incidents, setIncidents] =
@@ -102,7 +108,25 @@ export default function Home() {
   const [selectedZone, setSelectedZone] = React.useState<Zone | null>(zones[0]);
   const [isReportSheetOpen, setIsReportSheetOpen] = React.useState(false);
   const [mapView, setMapView] = React.useState<'normal' | 'heatmap'>('heatmap');
+  
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        if(parsedUser.role !== 'admin'){
+            setActiveView('event-info');
+        }
+    } else {
+      router.push('/login');
+    }
+  }, [router]);
 
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    router.push('/login');
+  };
 
   const handleSelectZone = (zoneId: string) => {
     const zone = zones.find((z) => z.id === zoneId) || null;
@@ -156,27 +180,32 @@ export default function Home() {
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-9 w-9">
                 <AvatarImage
-                  src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
+                  src={`https://i.pravatar.cc/150?u=${user?.id}`}
                   alt="User avatar"
                 />
-                <AvatarFallback>JD</AvatarFallback>
+                <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">John Doe</p>
+                <p className="text-sm font-medium leading-none">{user?.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  j.doe@drishti.sec
+                  {user?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setActiveView('settings')}>
+                <Settings className="mr-2"/>
+                Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Log out</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2" />
+                Log out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -194,6 +223,14 @@ export default function Home() {
     </Button>
   )
 
+  if (!user) {
+    return (
+        <div className="flex min-h-screen w-full items-center justify-center">
+            <p>Loading...</p>
+        </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-60 flex-col border-r bg-background sm:flex">
@@ -204,13 +241,21 @@ export default function Home() {
           </a>
         </div>
         <nav className="flex-1 space-y-1 p-4">
-            <NavButton view="dashboard" icon={<LayoutDashboard className="mr-2 h-4 w-4" />} label="Dashboard" />
-            <NavButton view="zones" icon={<Users className="mr-2 h-4 w-4" />} label="Zones" />
-            <NavButton view="drones" icon={<Wind className="mr-2 h-4 w-4" />} label="Drones" />
-            <NavButton view="incident-reports" icon={<Siren className="mr-2 h-4 w-4" />} label="Incident Reports" />
-            <NavButton view="queue-management" icon={<Clock className="mr-2 h-4 w-4" />} label="Queue Management" />
-            <NavButton view="ai-insights" icon={<BotMessageSquare className="mr-2 h-4 w-4" />} label="AI Insights" />
-            <NavButton view="mock-drills" icon={<Cpu className="mr-2 h-4 w-4" />} label="Mock Drills" />
+            {user.role === 'admin' ? (
+                <>
+                    <NavButton view="dashboard" icon={<LayoutDashboard className="mr-2 h-4 w-4" />} label="Dashboard" />
+                    <NavButton view="zones" icon={<Users className="mr-2 h-4 w-4" />} label="Zones" />
+                    <NavButton view="drones" icon={<Wind className="mr-2 h-4 w-4" />} label="Drones" />
+                    <NavButton view="incident-reports" icon={<Siren className="mr-2 h-4 w-4" />} label="Incident Reports" />
+                    <NavButton view="queue-management" icon={<Clock className="mr-2 h-4 w-4" />} label="Queue Management" />
+                    <NavButton view="ai-insights" icon={<BotMessageSquare className="mr-2 h-4 w-4" />} label="AI Insights" />
+                    <NavButton view="mock-drills" icon={<Cpu className="mr-2 h-4 w-4" />} label="Mock Drills" />
+                </>
+            ) : (
+                <>
+                    <NavButton view="incident-reports" icon={<Siren className="mr-2 h-4 w-4" />} label="Incident Reports" />
+                </>
+            )}
             <NavButton view="event-info" icon={<Info className="mr-2 h-4 w-4" />} label="Event Info" />
         </nav>
       </aside>
@@ -219,7 +264,7 @@ export default function Home() {
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
             <PageHeader />
 
-            {activeView === 'dashboard' && (
+            {activeView === 'dashboard' && user.role === 'admin' && (
                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
                      <Card className="lg:col-span-2">
                         <CardHeader className="flex flex-row items-center justify-between">
@@ -268,7 +313,7 @@ export default function Home() {
                 </div>
             )}
             
-            {activeView === 'zones' && (
+            {activeView === 'zones' && user.role === 'admin' && (
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                     <Card className="lg:col-span-4">
                         <CardHeader>
@@ -346,7 +391,7 @@ export default function Home() {
                 </div>
             )}
 
-            {activeView === 'drones' && (
+            {activeView === 'drones' && user.role === 'admin' && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline">Drones</CardTitle>
@@ -370,7 +415,7 @@ export default function Home() {
                 </Card>
             )}
 
-            {activeView === 'queue-management' && (
+            {activeView === 'queue-management' && user.role === 'admin' && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline">Queue Management</CardTitle>
@@ -382,7 +427,7 @@ export default function Home() {
                 </Card>
             )}
 
-            {activeView === 'ai-insights' && (
+            {activeView === 'ai-insights' && user.role === 'admin' && (
                  <div className="grid gap-6 md:grid-cols-2">
                     <Card>
                         <CardHeader>
@@ -405,7 +450,7 @@ export default function Home() {
                 </div>
             )}
 
-            {activeView === 'mock-drills' && (
+            {activeView === 'mock-drills' && user.role === 'admin' && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline">Mock Drills</CardTitle>
@@ -425,6 +470,29 @@ export default function Home() {
                     </CardHeader>
                     <CardContent>
                         <p>Event information page coming soon.</p>
+                    </CardContent>
+                </Card>
+            )}
+            
+            {activeView === 'settings' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline">Settings</CardTitle>
+                        <CardDescription>View your account information.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <Label>Name</Label>
+                            <p className="text-lg">{user.name}</p>
+                        </div>
+                        <div>
+                            <Label>Email</Label>
+                            <p className="text-lg">{user.email}</p>
+                        </div>
+                         <div>
+                            <Label>Role</Label>
+                            <p className="text-lg capitalize">{user.role}</p>
+                        </div>
                     </CardContent>
                 </Card>
             )}

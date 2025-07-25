@@ -1,8 +1,9 @@
+
 import { Zone, Incident, CrowdDensity, User } from "./types";
 
 export const users: User[] = [
-  { id: 'user-1', mobileNumber: '1234567890', password: 'password', role: 'admin' },
-  { id: 'user-2', mobileNumber: '0987654321', password: 'password', role: 'staff' },
+  { id: 'user-1', name: 'John Doe', email: 'admin@drishti.sec', role: 'admin' },
+  { id: 'user-2', name: 'Jane Smith', email: 'staff@drishti.sec', role: 'staff' },
 ];
 
 export const zones: Zone[] = [
