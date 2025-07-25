@@ -35,3 +35,10 @@ export interface Incident {
   timestamp: string;
   assignedAgent: string;
 }
+
+export interface User {
+  id: string;
+  mobileNumber: string;
+  password: string; // In a real app, this should be a hashed password
+  role: 'admin' | 'staff';
+}
