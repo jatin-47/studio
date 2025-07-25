@@ -28,7 +28,6 @@ import {
   type Incident,
   type IncidentSeverity,
   type IncidentType,
-  type User,
   zones as initialZones,
   incidents as initialIncidents,
   waitTimeData,
@@ -70,6 +69,7 @@ import { ReportIncidentForm } from "@/components/drishti/report-incident-form";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import { getSession, logout } from "@/actions/auth";
 
 const DrishtiLogo = () => (
   <svg
@@ -97,6 +97,13 @@ const DrishtiLogo = () => (
   </svg>
 );
 
+type User = {
+  uid: string;
+  email?: string;
+  name?: string;
+  role?: string;
+};
+
 
 export default function Home() {
   const router = useRouter();
@@ -110,20 +117,20 @@ export default function Home() {
   const [mapView, setMapView] = React.useState<'normal' | 'heatmap'>('heatmap');
   
   React.useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        if(parsedUser.role !== 'admin'){
-            setActiveView('event-info');
+    getSession().then(({ user }) => {
+        if (user) {
+            setUser(user);
+            if(user.role !== 'admin'){
+                setActiveView('event-info');
+            }
+        } else {
+            router.push('/login');
         }
-    } else {
-      router.push('/login');
-    }
+    });
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await logout();
     setUser(null);
     router.push('/login');
   };
@@ -180,10 +187,10 @@ export default function Home() {
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-9 w-9">
                 <AvatarImage
-                  src={`https://i.pravatar.cc/150?u=${user?.id}`}
+                  src={`https://i.pravatar.cc/150?u=${user?.uid}`}
                   alt="User avatar"
                 />
-                <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>

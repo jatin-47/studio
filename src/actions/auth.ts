@@ -1,39 +1,56 @@
 
 "use server";
+import { cookies } from "next/headers";
+import { authAdmin } from "@/lib/firebase-admin";
 
-import { users } from "@/lib/data";
-import { User } from "@/lib/types";
-
-export async function checkUser(email: string) {
+export async function login(idToken: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const user = users.find((u) => u.email === email);
+    const decodedToken = await authAdmin.verifyIdToken(idToken);
+    const { uid } = decodedToken;
 
-    if (user) {
-      return { exists: true };
-    } else {
-      return { exists: false, error: "You cannot login, contact the admin." };
-    }
+    // Session cookie expires in 14 days
+    const expiresIn = 60 * 60 * 24 * 14 * 1000;
+    const sessionCookie = await authAdmin.createSessionCookie(idToken, { expiresIn });
+    
+    cookies().set("session", sessionCookie, {
+      maxAge: expiresIn,
+      httpOnly: true,
+      secure: true,
+    });
+    
+    return { success: true };
   } catch (error) {
-    console.error(error);
-    return { exists: false, error: "An unexpected error occurred." };
+    console.error("Error creating session cookie:", error);
+    return { success: false, error: "Failed to create session." };
   }
 }
 
-export async function login(email: string): Promise<{ success: boolean; user?: User; error?: string }> {
-  try {
-    const user = users.find((u) => u.email === email);
+export async function logout(): Promise<{ success: boolean }> {
+  cookies().delete("session");
+  return { success: true };
+}
 
-    if (user) {
-      // In a real app, you would also verify the OTP here.
-      // We are simulating a successful login if the email exists.
-      return { success: true, user };
-    } else {
-      // This case should ideally not be hit if checkUser is called first,
-      // but is kept for robustness.
-      return { success: false, error: "Invalid email." };
+export async function getSession(): Promise<{ user: { uid: string; email?: string; name?: string; role?: string } | null }> {
+  try {
+    const sessionCookie = cookies().get("session")?.value;
+    if (!sessionCookie) {
+      return { user: null };
     }
+    const decodedClaims = await authAdmin.verifySessionCookie(sessionCookie, true);
+    const user = await authAdmin.getUser(decodedClaims.uid);
+
+    return {
+      user: {
+        uid: decodedClaims.uid,
+        email: decodedClaims.email,
+        name: user.displayName || decodedClaims.email?.split('@')[0],
+        role: (decodedClaims.role as string) || 'attendee',
+      },
+    };
   } catch (error) {
-    console.error(error);
-    return { success: false, error: "An unexpected error occurred." };
+    // Session cookie is invalid or expired.
+    // Force user to login again.
+    cookies().delete("session");
+    return { user: null };
   }
 }
