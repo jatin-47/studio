@@ -79,7 +79,7 @@ export default function LoginPage() {
     const response = await sendOtp(email);
     if (response.success) {
       setOtpSent(true);
-      toast({ title: "OTP Sent", description: "A mock OTP has been sent (use 123456)." });
+      toast({ title: "OTP Sent", description: response.error || "An OTP has been sent to your email." });
     } else {
       toast({ variant: "destructive", title: "Error", description: response.error });
     }
