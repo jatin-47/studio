@@ -20,14 +20,14 @@ import {
   Thermometer,
   Settings,
   LogOut,
+  Loader2,
+  Upload,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Zone, Incident, CrowdDensity, User, IncidentSeverity, IncidentType } from "@/lib/types";
+
 import {
-  type Zone,
-  type Incident,
-  type IncidentSeverity,
-  type IncidentType,
   zones as initialZones,
   incidents as initialIncidents,
   waitTimeData,
@@ -68,8 +68,14 @@ import { SmartLocationTool } from "@/components/drishti/smart-location-tool";
 import { ReportIncidentForm } from "@/components/drishti/report-incident-form";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { getSession, logout } from "@/actions/auth";
+import { updateUserProfile } from "@/actions/user";
+import { useToast } from "@/hooks/use-toast";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
 
 const DrishtiLogo = () => (
   <svg
@@ -97,16 +103,18 @@ const DrishtiLogo = () => (
   </svg>
 );
 
-type User = {
-  uid: string;
-  email?: string;
-  name?: string;
-  role?: string;
-};
+const DefaultAvatar = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+)
+
 
 
 export default function Home() {
   const router = useRouter();
+  const { toast } = useToast();
   const [user, setUser] = React.useState<User | null>(null);
   const [activeView, setActiveView] = React.useState("dashboard");
   const [zones, setZones] = React.useState<Zone[]>(initialZones);
@@ -115,11 +123,13 @@ export default function Home() {
   const [selectedZone, setSelectedZone] = React.useState<Zone | null>(zones[0]);
   const [isReportSheetOpen, setIsReportSheetOpen] = React.useState(false);
   const [mapView, setMapView] = React.useState<'normal' | 'heatmap'>('heatmap');
+  const [profilePicFile, setProfilePicFile] = React.useState<File | null>(null);
+  const [isUploading, setIsUploading] = React.useState(false);
   
   React.useEffect(() => {
     getSession().then(({ user }) => {
         if (user) {
-            setUser(user);
+            setUser(user as User);
             if(user.role !== 'admin'){
                 setActiveView('event-info');
             }
@@ -154,6 +164,41 @@ export default function Home() {
     setIsReportSheetOpen(false);
   }
 
+  const handleProfilePicUpload = async () => {
+    if (!profilePicFile || !user) return;
+    setIsUploading(true);
+    try {
+        const fileExtension = profilePicFile.name.split('.').pop();
+        const storageRef = ref(storage, `profile-pics/${user.uid}.${fileExtension}`);
+        const snapshot = await uploadBytes(storageRef, profilePicFile);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        const result = await updateUserProfile(user.uid, { photoURL: downloadURL });
+
+        if (result.success && result.user) {
+            setUser(prevUser => prevUser ? { ...prevUser, ...result.user } : null);
+            toast({
+                variant: 'success',
+                title: 'Success',
+                description: 'Profile picture updated successfully.'
+            });
+        } else {
+            throw new Error(result.error || 'Failed to update profile picture.');
+        }
+    } catch (error) {
+        console.error("Error uploading file:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: 'There was an error uploading your profile picture.'
+        });
+    } finally {
+        setIsUploading(false);
+        setProfilePicFile(null);
+    }
+  }
+
+
   const PageHeader = () => (
     <header className="flex items-center justify-between">
       <h1 className="text-2xl font-bold font-headline capitalize">
@@ -187,10 +232,12 @@ export default function Home() {
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-9 w-9">
                 <AvatarImage
-                  src={`https://i.pravatar.cc/150?u=${user?.uid}`}
+                  src={user?.photoURL}
                   alt="User avatar"
                 />
-                <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+                <AvatarFallback>
+                    <DefaultAvatar />
+                </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
@@ -233,7 +280,7 @@ export default function Home() {
   if (!user) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center">
-            <p>Loading...</p>
+            <Loader2 className="animate-spin h-8 w-8 text-primary"/>
         </div>
     )
   }
@@ -485,9 +532,31 @@ export default function Home() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline">Settings</CardTitle>
-                        <CardDescription>View your account information.</CardDescription>
+                        <CardDescription>View and update your account information.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center gap-4">
+                            <Avatar className="h-20 w-20">
+                                <AvatarImage src={user.photoURL} alt="User avatar" />
+                                <AvatarFallback><DefaultAvatar /></AvatarFallback>
+                            </Avatar>
+                            <div className="grid gap-1.5">
+                                <Label htmlFor="profile-pic">Update Profile Picture</Label>
+                                <div className="flex gap-2">
+                                <Input 
+                                    id="profile-pic" 
+                                    type="file" 
+                                    accept="image/png, image/jpeg"
+                                    onChange={(e) => setProfilePicFile(e.target.files ? e.target.files[0] : null)}
+                                    className="max-w-xs"
+                                />
+                                <Button onClick={handleProfilePicUpload} disabled={!profilePicFile || isUploading}>
+                                    {isUploading ? <Loader2 className="animate-spin" /> : <Upload />}
+                                    Upload
+                                </Button>
+                                </div>
+                            </div>
+                        </div>
                         <div>
                             <Label>Name</Label>
                             <p className="text-lg">{user.name}</p>

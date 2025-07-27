@@ -2,8 +2,8 @@
 import { Zone, Incident, CrowdDensity, User } from "./types";
 
 export const users: User[] = [
-  { id: 'user-1', name: 'John Doe', email: 'admin@drishti.sec', role: 'admin' },
-  { id: 'user-2', name: 'Jane Smith', email: 'staff@drishti.sec', role: 'staff' },
+  { uid: 'user-1', name: 'John Doe', email: 'admin@drishti.sec', role: 'admin' },
+  { uid: 'user-2', name: 'Jane Smith', email: 'staff@drishti.sec', role: 'staff' },
 ];
 
 export const zones: Zone[] = [
@@ -112,8 +112,8 @@ export const waitTimeData = [
 ];
 
 export const crowdDensityData = [
-    { name: 'Low', value: 1, fill: 'hsl(var(--chart-3))' },
-    { name: 'Medium', value: 0, fill: 'hsl(var(--chart-4))' },
-    { name: 'High', value: 2, fill: 'hsl(var(--chart-2))' },
-    { name: 'Critical', value: 1, fill: 'hsl(var(--destructive))' },
+    { name: 'Low', density: 1, fill: 'hsl(var(--chart-3))' },
+    { name: 'Medium', density: 0, fill: 'hsl(var(--chart-4))' },
+    { name: 'High', density: 2, fill: 'hsl(var(--chart-2))' },
+    { name: 'Critical', density: 1, fill: 'hsl(var(--destructive))' },
 ];

@@ -3,17 +3,13 @@ import * as admin from 'firebase-admin';
 
 if (!admin.apps.length) {
     try {
-        const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-        if (!serviceAccountString) {
-            throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable not set.');
-        }
-        const serviceAccount = JSON.parse(serviceAccountString);
+        const serviceAccount = require("./serviceAccountKey.json");
         admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
+            credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
         });
     } catch (error: any) {
         console.error("Firebase admin initialization error:", error.message);
-        throw new Error("Could not initialize Firebase Admin SDK. Please check your service account credentials.");
+        throw new Error("Could not initialize Firebase Admin SDK. Please check your serviceAccountKey.json file.");
     }
 }
 

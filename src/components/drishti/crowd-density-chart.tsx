@@ -1,11 +1,13 @@
+
 "use client"
 
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
 
 interface ChartData {
-    name: string
-    density: number
+    name: string;
+    density: number;
+    fill: string;
 }
 
 interface CrowdDensityChartProps {

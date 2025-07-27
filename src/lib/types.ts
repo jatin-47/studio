@@ -35,6 +35,7 @@ export interface Incident {
   location: string;
   timestamp: string;
   assignedAgent: string;
+  imageURL?: string;
 }
 
 export interface User {
@@ -42,4 +43,5 @@ export interface User {
   email?: string;
   name?: string;
   role?: string;
+  photoURL?: string;
 }

@@ -36,7 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { type Incident, type IncidentSeverity } from "@/lib/data";
+import { type Incident, type IncidentSeverity } from "@/lib/types";
 
 const severityVariant: Record<IncidentSeverity, "default" | "secondary" | "destructive" | "outline"> = {
   Low: "secondary",

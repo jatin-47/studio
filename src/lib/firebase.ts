@@ -1,18 +1,23 @@
 
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
+import { getFirestore } from "firebase/firestore";
+
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB4SviSkRVNIE2OGPo0JI2C2lzwikr2dfI",
-  authDomain: "eventide-intel-jn8fi.firebaseapp.com",
-  projectId: "eventide-intel-jn8fi",
-  storageBucket: "eventide-intel-jn8fi.firebasestorage.app",
-  messagingSenderId: "830236450380",
-  appId: "1:830236450380:web:893ee0c9be48e652145ee9"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+const storage = getStorage(app);
+const db = getFirestore(app, 'users');
 
-export { app, auth };
+export { app, auth, storage, db };
